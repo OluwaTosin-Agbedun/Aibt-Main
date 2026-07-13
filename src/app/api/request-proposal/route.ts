@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
-const resendApiKey = process.env.RESEND_API_KEY;
 const trainingManagerEmail = process.env.TRAINING_MANAGER_EMAIL ?? "training.manager@aibt.edu.ng";
 const fromEmail = process.env.EMAIL_FROM ?? "AIBT <no-reply@aibt.edu.ng>";
 
-if (!resendApiKey) {
-  throw new Error("Missing RESEND_API_KEY environment variable.");
+function getResendClient() {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) {
+    throw new Error("Missing RESEND_API_KEY environment variable.");
+  }
+  return new Resend(resendApiKey);
 }
 
-const resend = new Resend(resendApiKey);
-
 export async function POST(request: Request) {
+  const resend = getResendClient();
   const body = (await request.json()) as Record<string, string>;
 
   const userEmail = body.email?.trim();
