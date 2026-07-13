@@ -42,10 +42,41 @@ export default function DynamicForm({
   successMessage: string;
 }) {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
+    setSubmitting(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const payload = fields.reduce((acc, field) => {
+      const value = formData.get(field.name);
+      acc[field.name] = value ? String(value) : "";
+      return acc;
+    }, {} as Record<string, string>);
+
+    try {
+      const response = await fetch("/api/request-proposal", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(body || "Unable to submit proposal request.");
+      }
+
+      setSubmitted(true);
+    } catch (err: any) {
+      setError(err?.message || "Unable to submit proposal request.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (submitted) {
@@ -117,11 +148,19 @@ export default function DynamicForm({
       ))}
 
       <div className="sm:col-span-2">
+        {error ? (
+          <p className="text-sm text-wine">{error}</p>
+        ) : null}
         <button
           type="submit"
-          className="bg-navy px-6 py-3 text-sm font-medium text-white hover:bg-navy-dark"
+          disabled={submitting}
+          className={`w-full rounded-full px-6 py-3 text-sm font-medium text-white transition ${
+            submitting
+              ? "cursor-not-allowed bg-charcoal/40"
+              : "bg-navy hover:bg-navy-dark"
+          }`}
         >
-          {submitLabel}
+          {submitting ? "Sending..." : submitLabel}
         </button>
       </div>
     </form>
